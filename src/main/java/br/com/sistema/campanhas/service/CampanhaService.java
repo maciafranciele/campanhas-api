@@ -1,23 +1,17 @@
 package br.com.sistema.campanhas.service;
 
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import javax.ws.rs.core.Response;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import br.com.sistema.campanhas.models.Campanha;
-import br.com.sistema.campanhas.models.CampanhaRequest;
-import br.com.sistema.campanhas.models.CampanhaResponse;
-import br.com.sistema.campanhas.repositories.CampanhaRepository;
+import br.com.sistema.campanhas.exception.CampanhaNaoEncontradaException;
+import br.com.sistema.campanhas.model.Campanha;
+import br.com.sistema.campanhas.repository.CampanhaRepository;
 
 @Service
 public class CampanhaService {
@@ -26,140 +20,85 @@ public class CampanhaService {
 	private CampanhaRepository repository;
 	
 
-	public List<CampanhaResponse> pesquisarTodas(){
-		
-		List<Campanha> campanhas = getCampanhasVigentes();
-		List<CampanhaResponse> response = new ArrayList<>();
-		
-		for (Campanha campanha : campanhas) {
-			
-			CampanhaResponse cr = new CampanhaResponse();
-			cr.setId(campanha.getId().toHexString());
-			cr.setNomeCampanha(campanha.getNomeCampanha());
-	
-			
-			SimpleDateFormat dataFimFormatada = new SimpleDateFormat("yyyy-MM-dd");
-			dataFimFormatada.format(campanha.getDataFim());
-			Calendar dataFim = dataFimFormatada.getCalendar();
-			cr.setDataFim(dataFim);
-
-			SimpleDateFormat dataInicioFormatada = new SimpleDateFormat("yyyy-MM-dd");
-			dataInicioFormatada.format(campanha.getDataInicio());
-			Calendar dataInicio = dataInicioFormatada.getCalendar();
-			cr.setDataInicio(dataInicio);
-			
-			response.add(cr);
-		}
-		
-		return response;
+	public List<Campanha> pesquisarTodas(){
+		return this.repository.findAll();
 	}
 
-	public CampanhaResponse adicionarCampanha(CampanhaRequest campanhaRequest) {
+	public Campanha adicionarCampanha( Campanha campanha){
+		List<Campanha> lista = this.pesquisarTodas();
+		List<Campanha> listaAtualizada = this.alteraData(lista, campanha);
 		
-		Campanha campanha = CampanhaRequestToCampanha(campanhaRequest);
-		
-		boolean mesmoPeriodo = existeCampanhasMesmoPeriodo(campanha);
-		
-		List<Campanha> listaCampanhas = this.getCampanhasVigentes();
+		listaAtualizada.add(campanha);
 		
 		
-		if(mesmoPeriodo){
-			
-			corrigirData(listaCampanhas,campanha);
-			
-			repository.salvaCampanha(campanha);
+		for (Campanha c : listaAtualizada) {
+			this.repository.save(c);
 		}
-		
-		
-		
-		
-		return null;
-	}
-	
-	private Campanha CampanhaRequestToCampanha(CampanhaRequest campanhaRequest) {
-		Campanha campanha = new Campanha();
-			campanha.setNomeCampanha(campanhaRequest.getNomeCampanha());
-			campanha.setDataInicio(campanhaRequest.getDataInicio().getTime());
-			campanha.setDataFim(campanhaRequest.getDataFim().getTime());
 		return campanha;
 	}
 
-	private void corrigirData(List<Campanha> listaCampanha, Campanha campanha) {
+	
+	public void deleteCampanha(Campanha campanha) {
+		this.repository.delete(campanha);
+	}
 
-		List<Campanha> novaLista = new ArrayList<>();
+	
+	
+	private List<Campanha> alteraData(List<Campanha> listaCampanha, Campanha campanha) {
+		List<Campanha> lista = listaCampanha;
+		List<Campanha> listaTemporaria = new ArrayList<>();
+		List<Campanha> listaAtualizada = new ArrayList<>();
 		
-		LocalDate dataCampanha = campanha.getDataFim().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-		System.out.println("data recebida" + dataCampanha);
-		
-		if (!listaCampanha.isEmpty()) {
-			
-			for (Campanha c : listaCampanha) {
-				LocalDate localDateFim = c.getDataFim().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-				localDateFim.plusDays(1);
-				
-				c.setDataFim(Date.from(localDateFim.atStartOfDay().atZone(ZoneId.systemDefault()).toInstant()));
-				
-				novaLista.add(c);
+		if (!lista.isEmpty()) {
+			for (Campanha c : lista) {
+				listaTemporaria.add(c);
 			}
-			
-			for (Campanha c : novaLista) {
-				repository.salvaCampanha(c);
-			}
-			
-			
 
+			for (Campanha c : lista) {
+				listaTemporaria.remove(c);
+				c.setDataFim(c.getDataFim().plusDays(1));
+
+				listaTemporaria.add(c);
+				listaAtualizada.add(c);
+			}
+			if (existeCampanhaComMesmaVigencia(listaAtualizada, campanha)) {
+				alteraData(listaAtualizada, campanha);
+			}
 		}
+		return lista;
 	}
 	
-	 public static Date asDate(LocalDate localDate) {
-		    return Date.from(localDate.atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
-		  }
-
-	public boolean existeCampanhasMesmoPeriodo(Campanha campanha){
+	private boolean existeCampanhaComMesmaVigencia(List<Campanha> listaCampanha, Campanha campanha){
 		
-		LocalDate campanhaDateFim = campanha.getDataFim().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-		LocalDate campanhaDateInicio = campanha.getDataInicio().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-		
-		List<Campanha> todasCampanhasVigentes = getCampanhasVigentes();
-		
-		for(Campanha c : todasCampanhasVigentes){
-			LocalDate listaDateFim = c.getDataFim().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-			LocalDate listaDateInicio = c.getDataInicio().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-			
-			if(campanhaDateInicio == listaDateInicio || campanhaDateInicio.isBefore(listaDateInicio)){
-				if(campanhaDateFim == listaDateFim || campanhaDateFim.isAfter(listaDateFim)){
-					return true;
-				}
+		for (Campanha c : listaCampanha) {
+			if(c.getDataFim().equals(campanha.getDataFim())){
+				return true;
 			}
 		}
 		return false;
-
 	}
-
-	private List<Campanha> getCampanhasVigentes() {
-		List<Campanha> todasCampanhas = this.repository.findAllCampanhas();
-		List<Campanha> vigentes = new ArrayList<>();
+	
+	public Campanha alterar(String id, Campanha Campanha) throws CampanhaNaoEncontradaException { 
+		Campanha campanha = this.repository.findById(id);
+		Optional.ofNullable(campanha).orElseThrow(() -> new CampanhaNaoEncontradaException());
+		return this.repository.save(campanha);
+	}
+	
+	public Response excluir(String id) throws CampanhaNaoEncontradaException {
+		Campanha campanha = this.repository.findById(id);
+		Optional.ofNullable(campanha).orElseThrow(() -> new CampanhaNaoEncontradaException());
+		this.repository.delete(campanha);
+		return Response.status(Response.Status.OK).build();
 		
-		for(Campanha campanha : todasCampanhas){
-
-			LocalDate localDateFim = campanha.getDataFim().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-			LocalDate hoje = LocalDate.now();
-			
-			if(hoje.isBefore(localDateFim) || hoje == localDateFim){
-				vigentes.add(campanha);
-			}
-		}
-		return vigentes;
+	}
+	
+	public Campanha buscarPorId(String id) throws CampanhaNaoEncontradaException{
+		Optional.ofNullable(this.repository.findById(id)).orElseThrow(() -> new CampanhaNaoEncontradaException());
+		return this.repository.findById(id);
 	}
 
-	public Response excluiCampanha(Long id) {
-		return Response.ok().build();
-	}
-
-	public CampanhaResponse atualizaCampanha(Long id) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
+	
+	
+	
 
 }
