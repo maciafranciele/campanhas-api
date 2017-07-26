@@ -1,5 +1,6 @@
 package br.com.sistema.campanhas.service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +22,7 @@ public class CampanhaService {
 	
 
 	public List<Campanha> pesquisarTodas(){
-		return this.repository.findAll();
+		return this.repository.findAllVigentes(LocalDate.now());
 	}
 
 	public Campanha adicionarCampanha( Campanha campanha){

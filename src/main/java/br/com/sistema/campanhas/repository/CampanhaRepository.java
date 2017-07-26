@@ -10,7 +10,7 @@ import br.com.sistema.campanhas.model.Campanha;
 
 public interface CampanhaRepository extends MongoRepository<Campanha, String> {
 	
-	@Query("{ 'data_Fim' : { $gt: ?0 } }")
+	@Query("{ 'data_fim' : { $gt: ?0 } }")
     public List<Campanha> findAllVigentes(LocalDate data);
 	
 	public Campanha findById(String id);
