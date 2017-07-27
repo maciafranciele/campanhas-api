@@ -28,7 +28,7 @@ public class CampanhaController {
 	@Cacheable(value = "campanhas")
 	@RequestMapping(method = RequestMethod.GET, produces =  {MediaType.APPLICATION_JSON_VALUE })
 	public List<Campanha> listaTodasAsCampanhas(){
-		return service.pesquisarTodas();
+		return service.pesquisaCampanhasVigentes();
 	}
 	
 	@CacheEvict(allEntries = true, value = "campanhas", beforeInvocation = false)
@@ -52,6 +52,11 @@ public class CampanhaController {
 	@RequestMapping(value = "/{id}", method = RequestMethod.GET, produces = { MediaType.APPLICATION_JSON_VALUE })
 	public Campanha pesquisarId(@PathVariable String id) throws CampanhaNaoEncontradaException {
 		return this.service.buscarPorId(id);
+	}
+	
+	@RequestMapping(value = "/time/{idTime}", method = RequestMethod.GET, produces = { MediaType.APPLICATION_JSON_VALUE })
+	public List<Campanha> pesquisarPeloTimeDoCoracao(@PathVariable String idTime) throws CampanhaNaoEncontradaException {
+		return this.service.buscarPorTime(idTime);
 	}
 	
 }

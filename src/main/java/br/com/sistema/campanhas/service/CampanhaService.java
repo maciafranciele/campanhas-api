@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 
 import br.com.sistema.campanhas.exception.CampanhaNaoEncontradaException;
 import br.com.sistema.campanhas.model.Campanha;
+import br.com.sistema.campanhas.model.TimeDoCoracao;
 import br.com.sistema.campanhas.repository.CampanhaRepository;
+import br.com.sistema.campanhas.repository.TimeRepository;
 
 @Service
 public class CampanhaService {
@@ -20,19 +22,21 @@ public class CampanhaService {
 	@Autowired
 	private CampanhaRepository repository;
 	
+	@Autowired
+	private TimeRepository timeRepository;
+	
 
-	public List<Campanha> pesquisarTodas(){
+	public List<Campanha> pesquisaCampanhasVigentes(){
 		return this.repository.findAllVigentes(LocalDate.now());
 	}
 
 	public Campanha adicionarCampanha( Campanha campanha){
-		List<Campanha> lista = this.pesquisarTodas();
-		List<Campanha> listaAtualizada = this.alteraData(lista, campanha);
-		
+		List<Campanha> listaCampanhas = this.pesquisaCampanhasVigentes();
+		List<Campanha> listaAtualizada = this.alteraData(listaCampanhas, campanha);
 		listaAtualizada.add(campanha);
 		
-		
 		for (Campanha c : listaAtualizada) {
+			System.out.println(c.getDataFim());
 			this.repository.save(c);
 		}
 		return campanha;
@@ -43,26 +47,25 @@ public class CampanhaService {
 		this.repository.delete(campanha);
 	}
 
-	
-	
 	private List<Campanha> alteraData(List<Campanha> listaCampanha, Campanha campanha) {
 		List<Campanha> lista = listaCampanha;
-		List<Campanha> listaTemporaria = new ArrayList<>();
-		List<Campanha> listaAtualizada = new ArrayList<>();
+		List<Campanha> listaDatas = new ArrayList<Campanha>();
+		List<Campanha> listaAtualizada = new ArrayList<Campanha>();
 		
 		if (!lista.isEmpty()) {
 			for (Campanha c : lista) {
-				listaTemporaria.add(c);
+				listaDatas.add(c);
 			}
 
 			for (Campanha c : lista) {
-				listaTemporaria.remove(c);
+				listaDatas.remove(c);
 				c.setDataFim(c.getDataFim().plusDays(1));
 
-				listaTemporaria.add(c);
+				listaDatas.add(c);
 				listaAtualizada.add(c);
 			}
-			if (existeCampanhaComMesmaVigencia(listaAtualizada, campanha)) {
+			
+			if (existeCampanhaComMesmaVigencia(listaDatas, campanha)) {
 				alteraData(listaAtualizada, campanha);
 			}
 		}
@@ -96,6 +99,12 @@ public class CampanhaService {
 	public Campanha buscarPorId(String id) throws CampanhaNaoEncontradaException{
 		Optional.ofNullable(this.repository.findById(id)).orElseThrow(() -> new CampanhaNaoEncontradaException());
 		return this.repository.findById(id);
+	}
+
+	public List<Campanha> buscarPorTime(String idTime) {
+		TimeDoCoracao time = this.timeRepository.findById(idTime);
+		
+		return this.repository.findByTime(time.getId());
 	}
 
 	

@@ -15,5 +15,8 @@ public interface CampanhaRepository extends MongoRepository<Campanha, String> {
 	
 	public Campanha findById(String id);
 	
+	@Query("{'time_coracao' :{'$ref' : 'times' , '$id' : ?0}}")
+	public List<Campanha> findByTime(String time);
+	
 	
 }

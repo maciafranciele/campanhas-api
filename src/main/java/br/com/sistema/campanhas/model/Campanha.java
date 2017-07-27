@@ -9,6 +9,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 @Document(collection = "campanhas")
 public class Campanha implements Serializable{
@@ -32,10 +34,8 @@ public class Campanha implements Serializable{
 	@JsonFormat(pattern="dd-MM-yyyy")
 	private LocalDate dataFim;
 	
-	@JsonFormat(pattern="dd-MM-yyyy")
 	
-	@DBRef(db="_id")
-	@Field("time_coracao")
+	@DBRef(db="times")
 	private TimeDoCoracao timeDoCoracao;
 	
 	

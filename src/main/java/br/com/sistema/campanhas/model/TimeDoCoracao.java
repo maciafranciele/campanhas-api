@@ -19,7 +19,7 @@ public class TimeDoCoracao implements Serializable{
 	
 	@Field("nome_time")
 	private String nomeTime;
-
+	
 	public String getId() {
 		return id;
 	}
